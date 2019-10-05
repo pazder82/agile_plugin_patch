@@ -1,0 +1,39 @@
+diff -rwuN redmine_agile/app/views/issues/_issue_story_points.html.erb redmine_agile_mod/app/views/issues/_issue_story_points.html.erb
+--- redmine_agile/app/views/issues/_issue_story_points.html.erb	2019-06-14 08:58:09.000000000 +0200
++++ redmine_agile_mod/app/views/issues/_issue_story_points.html.erb	2019-07-09 21:45:57.676135885 +0200
+@@ -1,7 +1,8 @@
+ <% if @issue.project.module_enabled?('agile') && RedmineAgile.use_story_points? && RedmineAgile.use_story_points_for?(@issue.tracker) %>
+   <%= issue_fields_rows do |rows|
+-    rows.left l(:label_agile_story_points), @issue.story_points
+-  end if @issue.story_points %>
+-<% end %>
++    rows.left l(:label_agile_story_points), @issue.story_points.to_s << " (Total: " << @issue.total_sp << ")"
++  end if @issue.total_sp %>
++<% end %>
++
+ 
+ <%= javascript_tag "linkableAttributeFields();" %>
+diff -rwuN redmine_agile/lib/redmine_agile/patches/issue_patch.rb redmine_agile_mod/lib/redmine_agile/patches/issue_patch.rb
+--- redmine_agile/lib/redmine_agile/patches/issue_patch.rb	2019-06-14 08:58:09.000000000 +0200
++++ redmine_agile_mod/lib/redmine_agile/patches/issue_patch.rb	2019-07-09 21:45:57.673135870 +0200
+@@ -77,6 +77,20 @@
+           s
+         end
+ 
++        # Returns the total number of story points assigned to this issue and its descendants
++        def total_sp
++          sp = agile_data.story_points.to_s || "0"
++          spi = sp.to_i
++          if !leaf?
++            descendants.joins("inner join agile_data on issue_id = issues.id").each do |row|
++              spi += row.story_points.to_i || 0
++            end
++          end
++          if spi > 0
++            spi.to_s
++          end
++        end
++
+         def sub_issues
+           descendants
+         end
